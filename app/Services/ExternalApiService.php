@@ -54,6 +54,8 @@ class ExternalApiService
      * 4. Store response in cache with TTL
      * 5. Return data
      *
+     * Tracks cache statistics (hits/misses) for monitoring.
+     *
      * @param  string  $endpoint  The external API endpoint (e.g., 'weather/current')
      * @param  array   $params    Query parameters to pass to the API
      * @return array|null         The API response data or null on error
@@ -64,11 +66,23 @@ class ExternalApiService
         $cacheKey = $this->getCacheKey($endpoint, $params);
         $ttl = $this->getCacheTtl();
 
+        // Check if data exists in cache before fetching
+        $cacheHit = $this->cache->has($cacheKey);
+
         try {
             // Use cache remember to implement cache-first logic
-            return $this->cache->remember($cacheKey, $ttl, function () use ($endpoint, $params, $cacheKey) {
+            $data = $this->cache->remember($cacheKey, $ttl, function () use ($endpoint, $params, $cacheKey) {
                 return $this->fetchFromApi($endpoint, $params, $cacheKey);
             });
+
+            // Track statistics: increment hit or miss counter
+            if ($cacheHit) {
+                $this->incrementStatistic('hits');
+            } else {
+                $this->incrementStatistic('misses');
+            }
+
+            return $data;
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             $this->logger->error('Failed to connect to external API', [
                 'endpoint' => $endpoint,
@@ -95,6 +109,28 @@ class ExternalApiService
             ]);
 
             return null;
+        }
+    }
+
+    /**
+     * Increment a cache statistic counter.
+     *
+     * Used to track cache hits and misses for performance monitoring.
+     *
+     * @param  string  $stat  The statistic to increment ('hits' or 'misses')
+     * @return void
+     */
+    protected function incrementStatistic(string $stat): void
+    {
+        try {
+            $key = "api_cache_stats:{$stat}";
+            $current = (int) $this->cache->get($key, 0);
+            $this->cache->put($key, $current + 1, 86400 * 30); // Keep stats for 30 days
+        } catch (\Exception $e) {
+            // Silently fail - don't let statistics tracking break the application
+            $this->logger->warning("Failed to increment cache statistic: {$stat}", [
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

@@ -2,6 +2,7 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
@@ -13,8 +14,8 @@ Schedule::command('logs:clean')
     ->at('00:00')
     ->timezone('UTC')
     ->onSuccess(function () {
-        \Log::info('Log cleanup task completed successfully');
+        Log::info('Log cleanup task completed successfully');
     })
     ->onFailure(function () {
-        \Log::error('Log cleanup task failed');
+        Log::error('Log cleanup task failed');
     });
