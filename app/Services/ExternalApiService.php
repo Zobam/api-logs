@@ -169,7 +169,7 @@ class ExternalApiService
      *
      * Uses Laravel's HTTP client with:
      * - Configured timeout (default 10 seconds)
-     * - Authentication headers if configured
+     * - Authentication via query parameters (APPID for OpenWeatherMap)
      * - Proper error handling
      *
      * @param  string  $endpoint  The external API endpoint
@@ -183,10 +183,12 @@ class ExternalApiService
         $url = $this->buildApiUrl($endpoint);
         $timeout = $this->config->get('apicache.timeout', 10);
 
+        // Add API key to query parameters (OpenWeatherMap uses APPID)
+        $params = $this->addApiKeyToParams($endpoint, $params);
+
         try {
-            // Make the request with timeout and any authentication headers
+            // Make the request with timeout
             return Http::timeout($timeout)
-                ->withHeaders($this->getAuthHeaders($endpoint))
                 ->get($url, $params);
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             // Re-throw connection exceptions to allow proper handling upstream
@@ -195,12 +197,37 @@ class ExternalApiService
     }
 
     /**
+     * Add API key to query parameters.
+     *
+     * OpenWeatherMap and most weather APIs expect the API key
+     * as a query parameter (APPID, appid, etc.) rather than in headers.
+     *
+     * @param  string  $endpoint  The endpoint (e.g., 'weather/current')
+     * @param  array   $params    Existing query parameters
+     * @return array             Parameters with API key added
+     */
+    protected function addApiKeyToParams(string $endpoint, array $params): array
+    {
+        $parts = explode('/', $endpoint, 2);
+        $apiName = $parts[0];
+
+        $apiKey = $this->config->get("apicache.external_apis.{$apiName}.api_key");
+        $keyParam = $this->config->get("apicache.external_apis.{$apiName}.key_param", 'APPID');
+
+        if ($apiKey) {
+            $params[$keyParam] = $apiKey;
+        }
+
+        return $params;
+    }
+
+    /**
      * Build the full URL for an external API endpoint.
      *
      * Looks up the base URL from the configured external APIs
      * and appends the endpoint path.
      *
-     * @param  string  $endpoint  The endpoint (e.g., 'weather/current')
+     * @param  string  $endpoint  The endpoint (e.g., 'weather/weather')
      * @return string             The full URL
      */
     protected function buildApiUrl(string $endpoint): string
@@ -218,34 +245,13 @@ class ExternalApiService
 
         // Ensure no double slashes in the URL
         $baseUrl = rtrim($baseUrl, '/');
-        $endpointPath = '/' . ltrim($endpointPath, '/');
 
-        return $baseUrl . $endpointPath;
-    }
-
-    /**
-     * Get authentication headers for an external API.
-     *
-     * Retrieves API keys and other authentication headers
-     * from configuration and includes them in requests.
-     *
-     * @param  string  $endpoint  The endpoint (e.g., 'weather/current')
-     * @return array             Authentication headers
-     */
-    protected function getAuthHeaders(string $endpoint): array
-    {
-        $parts = explode('/', $endpoint, 2);
-        $apiName = $parts[0];
-
-        $apiKey = $this->config->get("apicache.external_apis.{$apiName}.api_key");
-
-        $headers = [];
-
-        if ($apiKey) {
-            // Add API key as Authorization header
-            $headers['Authorization'] = "Bearer {$apiKey}";
+        // Only add slash if we have an endpoint path
+        if ($endpointPath) {
+            $endpointPath = '/' . ltrim($endpointPath, '/');
+            return $baseUrl . $endpointPath;
         }
 
-        return $headers;
+        return $baseUrl;
     }
 }

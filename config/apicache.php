@@ -52,23 +52,20 @@ return [
     | External API Configuration
     |--------------------------------------------------------------------------
     |
-    | Configuration for external API endpoints that the application calls.
-    | Each API can have its own base_url and authentication credentials.
+    | Configuration for the OpenWeatherMap API.
+    | The API key is passed as a query parameter (APPID or appid).
     |
-    | Supported APIs can be added here with their respective configuration.
+    | OpenWeatherMap Free Tier: 1,000 calls/day
+    | Signup: https://openweathermap.org/appid
     |
     */
 
     'external_apis' => [
 
         'weather' => [
-            'base_url' => env('WEATHER_API_URL'),
+            'base_url' => env('WEATHER_API_URL', 'https://api.openweathermap.org/data/2.5'),
             'api_key' => env('WEATHER_API_KEY'),
-        ],
-
-        'news' => [
-            'base_url' => env('NEWS_API_URL'),
-            'api_key' => env('NEWS_API_KEY'),
+            'key_param' => env('WEATHER_API_KEY_PARAM', 'APPID'),  // Query parameter name for API key
         ],
 
     ],
@@ -78,14 +75,14 @@ return [
     | Cache Warming Endpoints
     |--------------------------------------------------------------------------
     |
-    | List of external API endpoints to pre-populate when running
+    | List of weather API endpoints to pre-populate when running
     | the cache:warm-api command. This improves initial response times
     | for frequently accessed data.
     |
     | Endpoints should be specified as comma-separated values in the
     | CACHE_WARM_ENDPOINTS environment variable.
     |
-    | Example: "weather/current,news/headlines,stocks/trending"
+    | Example: "weather/weather?q=London,weather/weather?q=Paris,weather/forecast?q=Tokyo"
     |
     */
 
