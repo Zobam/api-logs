@@ -41,6 +41,83 @@ php artisan boost:install
 
 Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
 
+## Redis Setup (Ubuntu)
+
+This application uses Redis for caching. Follow these steps to install and configure Redis on Ubuntu:
+
+### Installation
+
+```bash
+# Update package list
+sudo apt update
+
+# Install Redis server
+sudo apt install redis-server -y
+```
+
+### Configuration
+
+```bash
+# Edit Redis configuration file
+sudo nano /etc/redis/redis.conf
+
+# Find and change 'supervised no' to:
+# supervised systemd
+
+# Save and exit (Ctrl+X, then Y, then Enter)
+```
+
+### Start Redis Service
+
+```bash
+# Restart Redis with new configuration
+sudo systemctl restart redis.service
+
+# Enable Redis to start on boot
+sudo systemctl enable redis
+
+# Check Redis status
+sudo systemctl status redis
+```
+
+### Verify Installation
+
+```bash
+# Test Redis connection
+redis-cli ping
+# Should return: PONG
+
+# Check Redis is running
+redis-cli
+# Then type: ping
+# Should return: PONG
+# Exit with: exit
+```
+
+### Laravel Configuration
+
+Update your `.env` file with Redis settings:
+
+```env
+CACHE_STORE=redis
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+```
+
+### Install PHP Redis Extension (Optional but Recommended)
+
+```bash
+# Install PHP Redis extension for better performance
+sudo apt install php-redis -y
+
+# Restart your web server (if using Apache)
+sudo systemctl restart apache2
+
+# Or restart PHP-FPM (if using Nginx)
+sudo systemctl restart php8.x-fpm  # Replace x with your PHP version
+```
+
 ## Contributing
 
 Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
